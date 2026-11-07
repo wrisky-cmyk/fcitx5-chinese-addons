@@ -5,9 +5,10 @@ set(TABLE_SOURCES
     context.cpp
     candidate.cpp
     factory.cpp
+    gbcharset.cpp
 )
 add_fcitx5_addon(table ${TABLE_SOURCES})
-target_link_libraries(table Fcitx5::Core Fcitx5::Config LibIME::Table LibIME::Pinyin Fcitx5::Module::Punctuation Fcitx5::Module::QuickPhrase Fcitx5::Module::PinyinHelper)
+target_link_libraries(table Fcitx5::Core Fcitx5::Config LibIME::Table LibIME::Pinyin Fcitx5::Module::Punctuation Fcitx5::Module::QuickPhrase Fcitx5::Module::PinyinHelper Fcitx5::Module::Notifications)
 install(TARGETS table DESTINATION "${CMAKE_INSTALL_LIBDIR}/fcitx5")
 configure_file(table.conf.in.in table.conf.in)
 fcitx5_translate_desktop_file("${CMAKE_CURRENT_BINARY_DIR}/table.conf.in" table.conf)

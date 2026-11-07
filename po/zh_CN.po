@@ -1483,3 +1483,27 @@ msgid ""
 "Add support for Pinyin, Table and many other Chinese related functionality "
 "to Fcitx"
 msgstr "增加对拼音，码表，以及其他许多中文相关的功能到 Fcitx"
+
+msgid "Only show candidates in GB2312 charset"
+msgstr "仅显示 GB2312 字符集内的候选"
+
+msgid "Toggle GB2312 filter hotkey"
+msgstr "切换 GB2312 过滤快捷键"
+
+msgid "Show characters beyond GB2312 charset"
+msgstr "显示 GB2312 字符集以外的字"
+
+msgid "GB2312"
+msgstr "GB2312"
+
+msgid "Extended"
+msgstr "扩展字符集"
+
+msgid "Candidate Charset"
+msgstr "候选字符集"
+
+msgid "Only show candidates in GB2312 charset."
+msgstr "仅显示 GB2312 字符集内的候选。"
+
+msgid "Candidates beyond GB2312 charset are also shown."
+msgstr "同时显示 GB2312 字符集以外的字。"

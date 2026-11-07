@@ -15,4 +15,5 @@ Version=@PROJECT_VERSION@
 [Addon/OptionalDependencies]
 0=fullwidth:@PROJECT_VERSION@
 1=quickphrase
+2=notifications
 

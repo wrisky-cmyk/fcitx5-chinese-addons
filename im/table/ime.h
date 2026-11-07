@@ -342,11 +342,14 @@ public:
     void saveAll();
     void updateConfig(const std::string &name, const RawConfig &config);
 
+    void setWordFilter(libime::TableWordFilter filter);
+
     void releaseUnusedDict(const std::unordered_set<std::string> &names);
     void reloadAllDict();
 
 private:
     libime::LanguageModelResolver *lm_;
+    libime::TableWordFilter wordFilter_;
     std::unordered_map<std::string, TableData> tables_;
 };
 

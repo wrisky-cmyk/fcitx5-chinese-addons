@@ -85,6 +85,7 @@ private:
     bool handleCandidateList(const TableConfig &config, KeyEvent &event);
     bool handleForgetWord(KeyEvent &event);
     bool handlePinyinMode(KeyEvent &event);
+    void updatePinyinModeUI();
     bool handleLookupPinyinOrModifyDictionaryMode(KeyEvent &event);
 
     bool isContextEmpty() const;

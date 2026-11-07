@@ -185,6 +185,7 @@ TableIME::requestDict(const std::string &name) {
             }
 
             populateOptions(dict, iter->second.root);
+            dict->setWordFilter(wordFilter_);
             std::shared_ptr<const libime::StaticLanguageModelFile> lmFile;
             try {
                 if (*iter->second.root.config->useSystemLanguageModel) {
@@ -238,6 +239,15 @@ void TableIME::updateConfig(const std::string &name, const RawConfig &config) {
 
     safeSaveAsIni(iter->second.root, StandardPathsType::PkgConfig,
                   stringutils::concat("table/", name, ".conf"));
+}
+
+void TableIME::setWordFilter(libime::TableWordFilter filter) {
+    wordFilter_ = std::move(filter);
+    for (auto &pair : tables_) {
+        if (pair.second.dict) {
+            pair.second.dict->setWordFilter(wordFilter_);
+        }
+    }
 }
 
 void TableIME::releaseUnusedDict(const std::unordered_set<std::string> &names) {

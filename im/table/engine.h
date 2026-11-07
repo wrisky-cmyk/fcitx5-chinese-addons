@@ -71,6 +71,14 @@ FCITX_CONFIGURATION(
                                _("Look up pinyin"),
                                {Key("Control+Alt+E")},
                                KeyListConstrain()};
+    Option<bool> gb2312Only{
+        this, "GB2312Only", _("Only show candidates in GB2312 charset"), true};
+    KeyListOption gb2312Hotkey{this,
+                               "GB2312Hotkey",
+                               _("Toggle GB2312 filter hotkey"),
+                               {Key("Control+Alt+G")},
+                               KeyListConstrain(
+                                   {KeyConstrainFlag::AllowModifierLess})};
     OptionWithAnnotation<LookupShuangpinProfileEnum,
                          LookupShuangpinProfileEnumI18NAnnotation>
         shuangpinProfile{this, "ShuangpinProfile",
@@ -110,6 +118,7 @@ public:
         saveConfig();
     }
     void populateConfig();
+    void toggleGB2312(InputContext *inputContext);
     void setSubConfig(const std::string &path,
                       const RawConfig & /*unused*/) override;
 
@@ -129,6 +138,7 @@ public:
     FCITX_ADDON_DEPENDENCY_LOADER(quickphrase, instance_->addonManager());
     FCITX_ADDON_DEPENDENCY_LOADER(pinyinhelper, instance_->addonManager());
     FCITX_ADDON_DEPENDENCY_LOADER(chttrans, instance_->addonManager());
+    FCITX_ADDON_DEPENDENCY_LOADER(notifications, instance_->addonManager());
 
 private:
     void cloudTableSelected(InputContext *inputContext,
@@ -139,11 +149,14 @@ private:
     void releaseStates();
     void reloadDict();
     void preload();
+    void applyGB2312Filter();
+    void updateGB2312Action();
 
     Instance *instance_;
     std::unique_ptr<TableIME> ime_;
     std::vector<std::unique_ptr<HandlerTableEntry<EventHandler>>> events_;
     SimpleAction predictionAction_;
+    SimpleAction gb2312Action_;
     FactoryFor<TableState> factory_;
 
     TableGlobalConfig config_;

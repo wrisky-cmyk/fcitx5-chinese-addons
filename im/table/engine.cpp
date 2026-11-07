@@ -7,6 +7,7 @@
 #include "engine.h"
 #include "config.h"
 #include "context.h"
+#include "gbcharset.h"
 #include "ime.h"
 #include "state.h"
 #include <cstddef>
@@ -46,6 +47,7 @@
 #include <libime/table/tablebaseddictionary.h>
 #include <map>
 #include <memory>
+#include <notifications_public.h>
 #include <quickphrase_public.h>
 #include <string>
 #include <string_view>
@@ -106,6 +108,12 @@ TableEngine::TableEngine(Instance *instance)
     instance_->userInterfaceManager().registerAction("table-prediction",
                                                      &predictionAction_);
 
+    gb2312Action_.setLongText(_("Show characters beyond GB2312 charset"));
+    gb2312Action_.connect<SimpleAction::Activated>(
+        [this](InputContext *ic) { toggleGB2312(ic); });
+    instance_->userInterfaceManager().registerAction("table-gb2312",
+                                                     &gb2312Action_);
+
     preloadEvent_ = instance_->eventLoop().addDeferEvent([this](EventSource *) {
         preload();
         preloadEvent_.reset();
@@ -120,7 +128,42 @@ void TableEngine::reloadConfig() {
     populateConfig();
 }
 
+void TableEngine::applyGB2312Filter() {
+    if (*config_.gb2312Only) {
+        ime_->setWordFilter(
+            [](std::string_view word) { return isGB2312Word(word); });
+    } else {
+        ime_->setWordFilter({});
+    }
+    updateGB2312Action();
+}
+
+void TableEngine::updateGB2312Action() {
+    gb2312Action_.setShortText(*config_.gb2312Only ? _("GB2312")
+                                                   : _("Extended"));
+    gb2312Action_.setIcon(*config_.gb2312Only ? "fcitx-gb2312-active"
+                                              : "fcitx-gb2312-inactive");
+}
+
+void TableEngine::toggleGB2312(InputContext *inputContext) {
+    config_.gb2312Only.setValue(!*config_.gb2312Only);
+    saveConfig();
+    applyGB2312Filter();
+
+    gb2312Action_.update(inputContext);
+    if (notifications()) {
+        notifications()->call<INotifications::showTip>(
+            "fcitx-table-gb2312-toggle", _("Table"), "",
+            _("Candidate Charset"),
+            *config_.gb2312Only
+                ? _("Only show candidates in GB2312 charset.")
+                : _("Candidates beyond GB2312 charset are also shown."),
+            1000);
+    }
+}
+
 void TableEngine::populateConfig() {
+    applyGB2312Filter();
     reverseShuangPinTable_.reset();
 
     std::unique_ptr<libime::ShuangpinProfile> shuangpinProfile;
@@ -200,6 +243,9 @@ void TableEngine::activate(const fcitx::InputMethodEntry &entry,
                                                      action);
             }
         }
+        updateGB2312Action();
+        inputContext->statusArea().addAction(StatusGroup::InputMethod,
+                                             &gb2312Action_);
     }
     if (context && *context->config().useFullWidth && fullwidth()) {
         if (auto *action =

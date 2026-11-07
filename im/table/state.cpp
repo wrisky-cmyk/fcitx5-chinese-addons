@@ -8,6 +8,7 @@
 #include "candidate.h"
 #include "context.h"
 #include "engine.h"
+#include "gbcharset.h"
 #include "ime.h"
 #include "pinyinhelper_public.h"
 #include "punctuation_public.h"
@@ -178,6 +179,9 @@ TableState::predictCandidateList(const std::vector<std::string> &words) {
     }
     auto candidateList = std::make_unique<CommonCandidateList>();
     for (const auto &word : words) {
+        if (*engine_->config().gb2312Only && !isGB2312Word(word)) {
+            continue;
+        }
         candidateList->append<TablePredictCandidateWord>(this, word);
     }
     candidateList->setSelectionKey(*context_->config().selection);
@@ -400,8 +404,14 @@ bool TableState::handlePinyinMode(KeyEvent &event) {
     if (!needUpdate) {
         return false;
     }
+    updatePinyinModeUI();
+    return true;
+}
+
+void TableState::updatePinyinModeUI() {
     auto &inputPanel = ic_->inputPanel();
     ic_->inputPanel().reset();
+    const auto &config = context_->config();
 
     if (!pinyinModeBuffer_.empty() && !isComposeTableMode()) {
         const auto &dict = engine_->pinyinDict();
@@ -418,13 +428,16 @@ bool TableState::handlePinyinMode(KeyEvent &event) {
 
         std::vector<std::pair<std::string, float>> pinyinWords;
 
-        dict.matchWords(pinyin.data(), pinyin.size(),
-                        [&pinyinWords, &lm](std::string_view,
-                                            std::string_view hanzi, float) {
-                            pinyinWords.emplace_back(hanzi,
-                                                     lm.singleWordScore(hanzi));
-                            return true;
-                        });
+        dict.matchWords(
+            pinyin.data(), pinyin.size(),
+            [this, &pinyinWords, &lm](std::string_view,
+                                      std::string_view hanzi, float) {
+                if (*engine_->config().gb2312Only && !isGB2312Word(hanzi)) {
+                    return true;
+                }
+                pinyinWords.emplace_back(hanzi, lm.singleWordScore(hanzi));
+                return true;
+            });
 
         std::sort(pinyinWords.begin(), pinyinWords.end(),
                   [](const auto &lhs, const auto &rhs) {
@@ -463,7 +476,6 @@ bool TableState::handlePinyinMode(KeyEvent &event) {
     }
     ic_->updatePreedit();
     ic_->updateUserInterface(UserInterfaceComponent::InputPanel);
-    return true;
 }
 
 bool TableState::handleForgetWord(KeyEvent &event) {
@@ -767,6 +779,25 @@ void TableState::keyEvent(const InputMethodEntry &entry, KeyEvent &event) {
 
     // by pass all key release and by pass all modifier
     if (event.isRelease() || event.key().isModifier()) {
+        return;
+    }
+
+    if (event.key().checkKeyList(*engine_->config().gb2312Hotkey)) {
+        engine_->toggleGB2312(inputContext);
+        switch (mode_) {
+        case TableMode::Normal:
+        case TableMode::ForgetWord:
+            // The candidate list is built by updateUI.
+            updateUI(true, false);
+            break;
+        case TableMode::Pinyin:
+            updatePinyinModeUI();
+            break;
+        default:
+            // Other modes will pick up the new filter on their next update.
+            break;
+        }
+        event.filterAndAccept();
         return;
     }
 
@@ -1325,13 +1356,19 @@ void TableState::updateUI(bool keepOldCursor, bool maybePredict) {
             candidateList->setPageSize(*config.pageSize);
 
             for (const auto &candidate : candidates) {
+                const size_t candidateIdx = idx++;
+                auto candidateString = candidate.toString();
+                if (*engine_->config().gb2312Only &&
+                    !isGB2312Word(candidateString)) {
+                    continue;
+                }
                 Text text;
                 Text comment;
-                text.append(candidate.toString());
+                text.append(std::move(candidateString));
                 std::string hint;
                 if (*config.hint) {
-                    hint =
-                        context->candidateHint(idx, *config.displayCustomHint);
+                    hint = context->candidateHint(candidateIdx,
+                                                  *config.displayCustomHint);
                 }
                 if (!hint.empty()) {
                     comment.append(*config.hintSeparator);
@@ -1343,8 +1380,7 @@ void TableState::updateUI(bool keepOldCursor, bool maybePredict) {
                 }
                 candidateList->append<TableCandidateWord>(
                     engine_, std::move(text), std::move(comment),
-                    *config.spaceBeforeHint, idx);
-                idx++;
+                    *config.spaceBeforeHint, candidateIdx);
             }
             if (!candidateList->empty()) {
                 auto page = cursor / *config.pageSize;
